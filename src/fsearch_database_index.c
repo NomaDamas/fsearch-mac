@@ -969,6 +969,7 @@ fsearch_database_index_new_with_content(FsearchDatabaseInclude *include,
     self->exclude_manager = g_object_ref(exclude_manager);
     self->flags = flags;
     self->needs_root_reappear_poll = false;
+    g_mutex_init(&self->mutex);
 
     self->folder_chunks = fsearch_database_chunked_array_new(folders,
                                                              TRUE,

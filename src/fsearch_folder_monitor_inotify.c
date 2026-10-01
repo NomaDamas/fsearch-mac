@@ -158,6 +158,7 @@ fsearch_folder_monitor_inotify_new(GMainContext *monitor_context, GAsyncQueue *e
     FsearchFolderMonitorInotify *self = calloc(1, sizeof(FsearchFolderMonitorInotify));
 
     self->fd = fd;
+    g_mutex_init(&self->mutex);
 
     self->event_queue = g_async_queue_ref(event_queue);
 
