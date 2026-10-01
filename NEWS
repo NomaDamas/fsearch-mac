@@ -1,4 +1,13 @@
 =================
+fsearch-mac 0.3-mac1 (fork of FSearch 0.3)
+=================
+
+* macOS: fix build (portable limits.h / off_t)
+* DB: fix crash when disposing a database loaded from file (uninitialized mutex)
+* macOS: live folder monitoring through FSEvents
+* Add fsearch-cli: index, watch (live daemon with Unix socket), search, stats, events
+
+=================
 Version 0.3
 =================
 
