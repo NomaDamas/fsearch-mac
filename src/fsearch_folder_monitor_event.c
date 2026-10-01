@@ -70,6 +70,8 @@ fsearch_folder_monitor_event_kind_to_string(FsearchFolderMonitorEventKind kind) 
         return "MOVE_SELF";
     case FSEARCH_FOLDER_MONITOR_EVENT_CLOSE_WRITE:
         return "CLOSE_WRITE";
+    case FSEARCH_FOLDER_MONITOR_EVENT_RESCAN:
+        return "RESCAN";
     default:
         return "INVALID";
     }

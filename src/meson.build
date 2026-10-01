@@ -82,6 +82,11 @@ fsearch_deps = [
     dependency('icu-uc', version: '>= 4.4'),
 ]
 
+if have_fsevents
+    libfsearch_sources += 'fsearch_folder_monitor_fsevents.c'
+    fsearch_deps += coreservices_dep
+endif
+
 fsearch_enums_headers = [
     'fsearch_result.h'
 ]

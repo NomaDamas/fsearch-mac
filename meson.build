@@ -74,10 +74,17 @@ else
   have_inotify = false
 endif
 
+# macOS: monitor folders through the CoreServices FSEvents API
+have_fsevents = host_machine.system() == 'darwin'
+if have_fsevents
+  coreservices_dep = dependency('appleframeworks', modules : ['CoreServices'])
+endif
+
 config_h = configuration_data()
 config_h.set('HAVE_MALLOC_TRIM', have_malloc_trim)
 config_h.set('HAVE_FANOTIFY', have_fanotify)
 config_h.set('HAVE_INOTIFY', have_inotify)
+config_h.set('HAVE_FSEVENTS', have_fsevents)
 config_h.set_quoted('APP_ID', app_id)
 config_h.set_quoted('PACKAGE_VERSION', meson.project_version())
 config_h.set_quoted('VERSION', meson.project_version())

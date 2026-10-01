@@ -239,6 +239,15 @@ db_entry_set_monitored_inotify(FsearchDatabaseEntry *entry);
 bool
 db_entry_is_monitored_inotify(FsearchDatabaseEntry *entry);
 
+void
+db_entry_set_unmonitored_fsevents(FsearchDatabaseEntry *entry);
+
+void
+db_entry_set_monitored_fsevents(FsearchDatabaseEntry *entry);
+
+bool
+db_entry_is_monitored_fsevents(FsearchDatabaseEntry *entry);
+
 FsearchDatabaseEntryFlags
 db_entry_get_flags(FsearchDatabaseEntry *entry);
 

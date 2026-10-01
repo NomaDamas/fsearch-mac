@@ -15,6 +15,7 @@
 #include "fsearch_folder_monitor_event.h"
 #include "fsearch_folder_monitor_fanotify.h"
 #include "fsearch_folder_monitor_inotify.h"
+#include "fsearch_folder_monitor_fsevents.h"
 
 #include <config.h>
 #include <gio/gio.h>
@@ -39,6 +40,7 @@ struct _FsearchDatabaseIndex {
     GMainContext *monitor_ctx;
     FsearchFolderMonitorFanotify *fanotify_monitor;
     FsearchFolderMonitorInotify *inotify_monitor;
+    FsearchFolderMonitorFsevents *fsevents_monitor;
 
     GAsyncQueue *event_queue;
 
@@ -181,6 +183,12 @@ resolve_watched_entry(FsearchDatabaseIndex *self, FsearchFolderMonitorEvent *eve
     case FSEARCH_FOLDER_MONITOR_INOTIFY:
 #ifdef HAVE_INOTIFY
         return fsearch_folder_monitor_inotify_resolve(self->inotify_monitor, event->watched_entry_handle);
+#else
+        return NULL;
+#endif
+    case FSEARCH_FOLDER_MONITOR_FSEVENTS:
+#ifdef HAVE_FSEVENTS
+        return fsearch_folder_monitor_fsevents_resolve(self->fsevents_monitor, event->watched_entry_handle);
 #else
         return NULL;
 #endif
@@ -348,6 +356,11 @@ index_unwatch_folder_locked(FsearchDatabaseIndex *self, FsearchDatabaseEntry *fo
         fsearch_folder_monitor_fanotify_unwatch(self->fanotify_monitor, folder);
 #endif
     }
+    if (db_entry_is_monitored_fsevents(folder)) {
+#ifdef HAVE_FSEVENTS
+        fsearch_folder_monitor_fsevents_unwatch(self->fsevents_monitor, folder);
+#endif
+    }
 }
 
 static void
@@ -368,6 +381,10 @@ index_clear_locked(FsearchDatabaseIndex *self, FsearchDatabaseIndexEventStats *s
 #ifdef HAVE_INOTIFY
     fsearch_folder_monitor_inotify_free(self->inotify_monitor);
     self->inotify_monitor = fsearch_folder_monitor_inotify_new(self->monitor_ctx, self->event_queue);
+#endif
+#ifdef HAVE_FSEVENTS
+    fsearch_folder_monitor_fsevents_free(self->fsevents_monitor);
+    self->fsevents_monitor = fsearch_folder_monitor_fsevents_new(self->monitor_ctx, self->event_queue);
 #endif
 
     // Clear the event queue
@@ -585,6 +602,7 @@ process_create_event(FsearchDatabaseIndex *self, FsearchFolderMonitorEvent *even
                            self->exclude_manager,
                            self->fanotify_monitor,
                            self->inotify_monitor,
+                           self->fsevents_monitor,
                            fsearch_database_include_get_one_file_system(self->include),
                            NULL,
                            NULL,
@@ -897,6 +915,9 @@ index_free(FsearchDatabaseIndex *self) {
 #ifdef HAVE_FANOTIFY
     g_clear_pointer(&self->fanotify_monitor, fsearch_folder_monitor_fanotify_free);
 #endif
+#ifdef HAVE_FSEVENTS
+    g_clear_pointer(&self->fsevents_monitor, fsearch_folder_monitor_fsevents_free);
+#endif
 
     self->needs_root_reappear_poll = false;
 
@@ -948,6 +969,9 @@ fsearch_database_index_new(FsearchDatabaseInclude *include,
 #endif
 #ifdef HAVE_INOTIFY
         self->inotify_monitor = fsearch_folder_monitor_inotify_new(self->monitor_ctx, self->event_queue);
+#endif
+#ifdef HAVE_FSEVENTS
+        self->fsevents_monitor = fsearch_folder_monitor_fsevents_new(self->monitor_ctx, self->event_queue);
 #endif
     }
 
@@ -1123,6 +1147,7 @@ fsearch_database_index_scan(FsearchDatabaseIndex *self, GCancellable *cancellabl
                         self->exclude_manager,
                         self->fanotify_monitor,
                         self->inotify_monitor,
+                        self->fsevents_monitor,
                         fsearch_database_include_get_one_file_system(self->include),
                         cancellable,
                         scan_status_cb,

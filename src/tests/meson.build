@@ -11,6 +11,16 @@ test_database_index_store = executable('test_database_index_store', 'test_databa
 test_database = executable('test_database', 'test_database.c', dependencies : libfsearch_dep)
 test_database_file = executable('test_database_file', 'test_database_file.c', dependencies : libfsearch_dep)
 
+if have_fsevents
+    test_folder_monitor_fsevents = executable('test_folder_monitor_fsevents',
+                                              'test_folder_monitor_fsevents.c',
+                                              dependencies : libfsearch_dep)
+    test('test_folder_monitor_fsevents',
+         test_folder_monitor_fsevents,
+         timeout : 120,
+    )
+endif
+
 test('test_database',
      test_database,
      env : [

@@ -23,6 +23,7 @@ typedef struct DatabaseWalkContext {
     DynamicArray *files;
     FsearchFolderMonitorFanotify *fanotify_monitor;
     FsearchFolderMonitorInotify *inotify_monitor;
+    FsearchFolderMonitorFsevents *fsevents_monitor;
     bool one_file_system;
     GTimer *timer;
     GMutex *monitor_lock;
@@ -49,7 +50,14 @@ watch_folder(DatabaseWalkContext *walk_context, FsearchDatabaseEntry *folder, co
         }
     }
 #endif
-    if (walk_context->fanotify_monitor || walk_context->inotify_monitor) {
+#ifdef HAVE_FSEVENTS
+    if (walk_context->fsevents_monitor) {
+        if (fsearch_folder_monitor_fsevents_watch(walk_context->fsevents_monitor, folder, path)) {
+            return;
+        }
+    }
+#endif
+    if (walk_context->fanotify_monitor || walk_context->inotify_monitor || walk_context->fsevents_monitor) {
         db_entry_set_monitored_failed(folder);
     }
 }
@@ -64,6 +72,11 @@ unwatch_folder(DatabaseWalkContext *walk_context, FsearchDatabaseEntry *folder) 
 #ifdef HAVE_INOTIFY
     if (walk_context->inotify_monitor && db_entry_is_monitored_inotify(folder)) {
         fsearch_folder_monitor_inotify_unwatch(walk_context->inotify_monitor, folder);
+    }
+#endif
+#ifdef HAVE_FSEVENTS
+    if (walk_context->fsevents_monitor && db_entry_is_monitored_fsevents(folder)) {
+        fsearch_folder_monitor_fsevents_unwatch(walk_context->fsevents_monitor, folder);
     }
 #endif
 }
@@ -248,6 +261,7 @@ db_scan_folder(const char *path,
                FsearchDatabaseExcludeManager *exclude_manager,
                FsearchFolderMonitorFanotify *fanotify_monitor,
                FsearchFolderMonitorInotify *inotify_monitor,
+               FsearchFolderMonitorFsevents *fsevents_monitor,
                bool one_file_system,
                GCancellable *cancellable,
                void (*status_cb)(const char *, gpointer),
@@ -279,6 +293,7 @@ db_scan_folder(const char *path,
         .files = files,
         .fanotify_monitor = fanotify_monitor,
         .inotify_monitor = inotify_monitor,
+        .fsevents_monitor = fsevents_monitor,
         .exclude_manager = exclude_manager,
         .path = path_string,
         .one_file_system = one_file_system,

@@ -1072,3 +1072,26 @@ db_entry_is_monitored_inotify(FsearchDatabaseEntry *entry) {
     }
     return entry ? (entry->flags & FSEARCH_DATABASE_ENTRY_FLAG_MONITORED_INOTIFY) != 0 : false;
 }
+
+void
+db_entry_set_unmonitored_fsevents(FsearchDatabaseEntry *entry) {
+    g_return_if_fail(entry);
+    g_assert(db_entry_is_folder(entry));
+    entry->flags &= ~FSEARCH_DATABASE_ENTRY_FLAG_MONITORED_FSEVENTS;
+}
+
+void
+db_entry_set_monitored_fsevents(FsearchDatabaseEntry *entry) {
+    g_return_if_fail(entry);
+    g_assert(db_entry_is_folder(entry));
+    entry->flags |= FSEARCH_DATABASE_ENTRY_FLAG_MONITORED_FSEVENTS;
+}
+
+bool
+db_entry_is_monitored_fsevents(FsearchDatabaseEntry *entry) {
+    g_return_val_if_fail(entry, false);
+    if (db_entry_is_file(entry)) {
+        entry = entry->parent;
+    }
+    return entry ? (entry->flags & FSEARCH_DATABASE_ENTRY_FLAG_MONITORED_FSEVENTS) != 0 : false;
+}
