@@ -120,4 +120,10 @@ fsearch = executable('fsearch', 'main.c',
     install: true,
 )
 
+fsearch_cli = executable('fsearch-cli', 'fsearch_cli.c',
+    include_directories: fsearch_include_dirs,
+    dependencies: libfsearch_dep,
+    install: true,
+)
+
 subdir('tests')

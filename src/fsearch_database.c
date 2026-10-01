@@ -60,6 +60,9 @@ struct _FsearchDatabase {
     GMutex mutex;
 
     bool disposed;
+
+    // Set before the first work item is queued, never changed afterwards.
+    bool read_only;
 };
 
 G_DEFINE_TYPE(FsearchDatabase, fsearch_database, G_TYPE_OBJECT)
@@ -913,7 +916,7 @@ database_load(FsearchDatabase *self) {
     database_set_store(self, store);
     g_clear_pointer(&self->pending_store, fsearch_database_index_store_unref);
 
-    if (self->rescan_manager) {
+    if (self->rescan_manager && !self->read_only) {
         if (!res) {
             fsearch_database_rescan_manager_request_full_scan(self->rescan_manager);
         }
@@ -968,11 +971,15 @@ handle_work_in_worker_thread_cb(gpointer user_data) {
 
     switch (fsearch_database_work_get_kind(work)) {
     case FSEARCH_DATABASE_WORK_QUIT:
-        database_save(self, FALSE);
+        if (!self->read_only) {
+            database_save(self, FALSE);
+        }
         quit = true;
         break;
     case FSEARCH_DATABASE_WORK_SAVE_TO_FILE:
-        database_save(self, TRUE);
+        if (!self->read_only) {
+            database_save(self, TRUE);
+        }
         break;
     case FSEARCH_DATABASE_WORK_LOAD_FROM_FILE:
         database_load(self);
@@ -1486,6 +1493,12 @@ fsearch_database_rescan_blocking(FsearchDatabase *self) {
                          DATABASE_INDEX_PROPERTY_FLAG_DEFAULT);
 
     return FSEARCH_RESULT_SUCCESS;
+}
+
+void
+fsearch_database_set_read_only(FsearchDatabase *self, bool read_only) {
+    g_return_if_fail(self);
+    self->read_only = read_only;
 }
 
 typedef struct {

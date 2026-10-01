@@ -51,4 +51,9 @@ fsearch_database_new(GFile *file,
                      FsearchDatabaseIncludeManager *include_manager,
                      FsearchDatabaseExcludeManager *exclude_manager);
 
+// A read-only database never writes its file (neither on explicit save nor on dispose) and doesn't
+// trigger scans after loading. Must be called before any work is queued.
+void
+fsearch_database_set_read_only(FsearchDatabase *self, bool read_only);
+
 G_END_DECLS
