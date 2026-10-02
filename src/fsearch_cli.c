@@ -376,6 +376,7 @@ cmd_index(int argc, char **argv) {
     gboolean no_monitor = FALSE;
     gboolean exclude_hidden = FALSE;
     gboolean one_file_system = FALSE;
+    gboolean no_default_excludes = FALSE;
     gint64 rescan_after = 0;
 
     GOptionEntry entries[] = {
@@ -385,6 +386,7 @@ cmd_index(int argc, char **argv) {
         {"exclude-path", 'x', 0, G_OPTION_ARG_FILENAME_ARRAY, &exclude_paths, "Folder to exclude by full path (repeatable)", "DIR"},
         {"exclude-hidden", 0, 0, G_OPTION_ARG_NONE, &exclude_hidden, "Skip hidden files and folders", NULL},
         {"one-file-system", 0, 0, G_OPTION_ARG_NONE, &one_file_system, "Don't cross filesystem boundaries", NULL},
+        {"no-default-excludes", 0, 0, G_OPTION_ARG_NONE, &no_default_excludes, "Don't exclude /dev and the magic namespaces", NULL},
         {"no-monitor", 0, 0, G_OPTION_ARG_NONE, &no_monitor, "Don't mark folders for live monitoring", NULL},
         {"rescan-after", 0, 0, G_OPTION_ARG_INT64, &rescan_after, "Periodic rescan interval in seconds (0 = off)", "SECONDS"},
         {NULL},
@@ -415,7 +417,8 @@ cmd_index(int argc, char **argv) {
         fsearch_database_include_manager_add(includes, include);
     }
 
-    FsearchDatabaseExcludeManager *excludes = fsearch_database_exclude_manager_new_with_defaults();
+    FsearchDatabaseExcludeManager *excludes = no_default_excludes ? fsearch_database_exclude_manager_new()
+                                                                  : fsearch_database_exclude_manager_new_with_defaults();
     fsearch_database_exclude_manager_set_exclude_hidden(excludes, exclude_hidden);
     for (char **p = exclude_patterns; p && *p; p++) {
         g_autoptr(FsearchDatabaseExclude) exclude = fsearch_database_exclude_new(*p,

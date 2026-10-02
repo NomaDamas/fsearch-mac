@@ -16,6 +16,26 @@ enum {
     WALK_CANCEL,
 };
 
+// A directory identity: two paths naming the same directory (firmlinks, bind mounts, second
+// mount points, ...) share device and inode, so a directory must only ever be scanned once.
+typedef struct DevIno {
+    guint64 dev;
+    guint64 ino;
+} DevIno;
+
+static guint
+dev_ino_hash(gconstpointer p) {
+    const DevIno *key = p;
+    return (guint)(key->ino ^ (key->dev << 16 | key->dev >> 48));
+}
+
+static gboolean
+dev_ino_equal(gconstpointer a, gconstpointer b) {
+    const DevIno *x = a;
+    const DevIno *y = b;
+    return x->dev == y->dev && x->ino == y->ino;
+}
+
 typedef struct DatabaseWalkContext {
     GString *path;
     FsearchDatabaseExcludeManager *exclude_manager;
@@ -32,7 +52,25 @@ typedef struct DatabaseWalkContext {
     gpointer status_cb_data;
     ssize_t file_handle_payload;
     dev_t root_device_id;
+    // Directories already scanned in this walk, keyed by (device, inode). Prevents firmlinks,
+    // bind mounts and repeated mount points from duplicating their whole subtree in the index.
+    GHashTable *visited_dirs;
 } DatabaseWalkContext;
+
+// Returns true when this directory was already visited, i.e. it must not be descended into.
+static bool
+dir_already_visited(DatabaseWalkContext *walk_context, const struct stat *st) {
+    DevIno key = {.dev = st->st_dev, .ino = st->st_ino};
+    return g_hash_table_contains(walk_context->visited_dirs, &key);
+}
+
+static void
+dir_mark_visited(DatabaseWalkContext *walk_context, const struct stat *st) {
+    DevIno *key = g_new(DevIno, 1);
+    key->dev = st->st_dev;
+    key->ino = st->st_ino;
+    g_hash_table_add(walk_context->visited_dirs, key);
+}
 
 static void
 watch_folder(DatabaseWalkContext *walk_context, FsearchDatabaseEntry *folder, const char *path) {
@@ -212,6 +250,11 @@ db_folder_scan_recursive(DatabaseWalkContext *walk_context, FsearchDatabaseEntry
         }
 
         if (is_dir) {
+            if (dir_already_visited(walk_context, &st)) {
+                g_debug("[db_scan] already visited, skipping: %s", path->str);
+                continue;
+            }
+            dir_mark_visited(walk_context, &st);
             db_folder_scan_recursive(walk_context,
                                      add_folder(walk_context, dent->d_name, path->str, st.st_mtime, parent));
         }
@@ -304,6 +347,12 @@ db_scan_folder(const char *path,
         .root_device_id = root_st.st_dev,
         .file_handle_payload = 0,
     };
+
+    g_autoptr(GHashTable) visited_dirs = g_hash_table_new_full(dev_ino_hash, dev_ino_equal, g_free, NULL);
+    DevIno *root_key = g_new(DevIno, 1);
+    *root_key = (DevIno){.dev = root_st.st_dev, .ino = root_st.st_ino};
+    g_hash_table_add(visited_dirs, root_key);
+    walk_context.visited_dirs = visited_dirs;
 
     const bool top_has_external_parent = parent != NULL;
 
