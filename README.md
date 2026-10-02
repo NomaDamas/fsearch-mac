@@ -13,7 +13,18 @@ What this fork adds on top of upstream FSearch:
 - **`fsearch-cli`**, a headless tool to build databases, keep them live and search them, for scripts and for other
   programs that call it as a separate process.
 
-## Building on macOS
+## Installation
+
+### Homebrew (recommended)
+
+```sh
+brew tap NomaDamas/fsearch-mac
+brew install fsearch-mac
+```
+
+This installs `fsearch-cli` (headless) and `fsearch` (GUI) from the [NomaDamas/homebrew-fsearch-mac](https://github.com/NomaDamas/homebrew-fsearch-mac) tap. Grant your terminal *Full Disk Access* in System Settings to index protected folders.
+
+### Build from source
 
 ```sh
 brew install meson ninja pkg-config gettext itstool gtk+3 pcre2 icu4c
