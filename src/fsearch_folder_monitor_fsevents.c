@@ -103,7 +103,10 @@ translate_event_path(FsearchFolderMonitorFsevents *self, const char *event_path)
             continue;
         }
         const size_t prefix_len = strlen(prefix);
-        if (strncmp(path, prefix, prefix_len) == 0 && (path[prefix_len] == '\0' || path[prefix_len] == G_DIR_SEPARATOR)) {
+        // A prefix that already ends in '/' (the root "/") has no boundary character after it.
+        const bool boundary_ok = prefix[prefix_len - 1] == G_DIR_SEPARATOR || path[prefix_len] == '\0'
+                                 || path[prefix_len] == G_DIR_SEPARATOR;
+        if (strncmp(path, prefix, prefix_len) == 0 && boundary_ok) {
             return g_strconcat(self->root_path, path + prefix_len, NULL);
         }
     }

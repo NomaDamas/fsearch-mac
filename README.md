@@ -50,6 +50,19 @@ fsearch-cli events --db ~/fs.db   # JSON line per index change
 `--db` defaults to `$XDG_DATA_HOME/fsearch/fsearch.db` (`~/.local/share/fsearch/fsearch.db`), the database the FSearch
 app uses. Queries use FSearch's [search syntax](https://github.com/cboxdoerfer/fsearch/wiki/Search-syntax).
 
+### Indexing a whole Mac
+
+```sh
+fsearch-cli index --db ~/fs.db --include / --include /Volumes/SSD1 --one-file-system
+```
+
+`--one-file-system` keeps a scan of `/` from crossing into other mounted volumes, so every volume you list with
+`--include` is covered exactly once. macOS exposes the root filesystem a second time under `/.nofollow`, `/.resolve`
+and `/System/Volumes`; those (and `/dev`) are excluded by default, so no folder ends up indexed twice. Measured on an
+Apple Silicon Mac with ~18M files / ~2.6M folders (system volume plus an external SSD): ~7 minutes, a ~1 GB database,
+~4 GB of RAM while scanning, and after a restart of `watch` around 5 seconds until searches are served again. Search
+takes a few hundred milliseconds over 20M entries.
+
 ### Output
 
 Plain `search` prints one absolute path per line. `--json` prints one object per result followed by a summary line:
