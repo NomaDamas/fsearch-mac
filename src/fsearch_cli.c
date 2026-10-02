@@ -124,6 +124,8 @@ json_append_string(GString *out, const char *str) {
 typedef enum {
     OUTPUT_PATHS,
     OUTPUT_JSON,
+    // Only the number of matches; no rows are fetched.
+    OUTPUT_COUNT,
 } OutputFormat;
 
 typedef struct {
@@ -251,6 +253,11 @@ run_search(FsearchDatabase *db, FsearchFilterManager *filters, const SearchReque
 
     const uint32_t num_results = wait.info ? fsearch_database_search_info_get_num_entries(wait.info) : 0;
     g_clear_pointer(&wait.info, fsearch_database_search_info_unref);
+
+    if (format == OUTPUT_COUNT) {
+        g_string_append_printf(out, "%u\n", num_results);
+        return num_results;
+    }
 
     const uint32_t num_rows = request->limit > 0 ? MIN(request->limit, num_results) : num_results;
     for (uint32_t i = 0; i < num_rows; i++) {
@@ -577,13 +584,8 @@ cmd_search(int argc, char **argv) {
     FsearchDatabase *db = open_database(db_path, true, NULL);
     FsearchFilterManager *filters = fsearch_filter_manager_new_with_defaults();
     g_autoptr(GString) out = g_string_new(NULL);
-    const uint32_t num_results = run_search(db, filters, &request, count ? OUTPUT_JSON : format, out);
-    if (count) {
-        printf("%u\n", num_results);
-    }
-    else {
-        fwrite(out->str, 1, out->len, stdout);
-    }
+    run_search(db, filters, &request, count ? OUTPUT_COUNT : format, out);
+    fwrite(out->str, 1, out->len, stdout);
     search_request_clear(&request);
     fsearch_filter_manager_unref(filters);
     g_object_unref(db);
@@ -761,21 +763,15 @@ daemon_run_next_search(Daemon *daemon) {
         if (request.sort_order == DATABASE_INDEX_PROPERTY_NONE) {
             request.sort_order = DATABASE_INDEX_PROPERTY_NAME;
         }
-        const bool count = g_strcmp0(fields[5], "count") == 0;
-        const OutputFormat format = g_strcmp0(fields[5], "paths") == 0 ? OUTPUT_PATHS : OUTPUT_JSON;
+        const OutputFormat format = g_strcmp0(fields[5], "count") == 0   ? OUTPUT_COUNT
+                                    : g_strcmp0(fields[5], "paths") == 0 ? OUTPUT_PATHS
+                                                                         : OUTPUT_JSON;
 
         // run_search() pumps the main context; mark the slot busy so re-entrant requests queue up.
         daemon->search_running = true;
         g_autoptr(GTimer) timer = g_timer_new();
         g_autoptr(GString) out = g_string_new(NULL);
-        if (count) {
-            request.limit = 0;
-            const uint32_t num_results = run_search(daemon->db, daemon->filters, &request, OUTPUT_JSON, out);
-            g_string_printf(out, "%u\n", num_results);
-        }
-        else {
-            run_search(daemon->db, daemon->filters, &request, format, out);
-        }
+        run_search(daemon->db, daemon->filters, &request, format, out);
         daemon->search_running = false;
         daemon_log(daemon, "search \"%s\" answered in %.1f ms", request.query, g_timer_elapsed(timer, NULL) * 1000.0);
         client_reply(client, out->str, out->len);
