@@ -372,6 +372,7 @@ cmd_index(int argc, char **argv) {
     g_autofree char *db_path = NULL;
     g_auto(GStrv) include_paths = NULL;
     g_auto(GStrv) exclude_patterns = NULL;
+    g_auto(GStrv) exclude_paths = NULL;
     gboolean no_monitor = FALSE;
     gboolean exclude_hidden = FALSE;
     gboolean one_file_system = FALSE;
@@ -381,6 +382,7 @@ cmd_index(int argc, char **argv) {
         {"db", 'd', 0, G_OPTION_ARG_FILENAME, &db_path, "Database file", "PATH"},
         {"include", 'i', 0, G_OPTION_ARG_FILENAME_ARRAY, &include_paths, "Folder to index (repeatable)", "DIR"},
         {"exclude", 'e', 0, G_OPTION_ARG_STRING_ARRAY, &exclude_patterns, "Wildcard to exclude by name (repeatable)", "GLOB"},
+        {"exclude-path", 'x', 0, G_OPTION_ARG_FILENAME_ARRAY, &exclude_paths, "Folder to exclude by full path (repeatable)", "DIR"},
         {"exclude-hidden", 0, 0, G_OPTION_ARG_NONE, &exclude_hidden, "Skip hidden files and folders", NULL},
         {"one-file-system", 0, 0, G_OPTION_ARG_NONE, &one_file_system, "Don't cross filesystem boundaries", NULL},
         {"no-monitor", 0, 0, G_OPTION_ARG_NONE, &no_monitor, "Don't mark folders for live monitoring", NULL},
@@ -421,6 +423,15 @@ cmd_index(int argc, char **argv) {
                                                                                  FSEARCH_DATABASE_EXCLUDE_TYPE_WILDCARD,
                                                                                  FSEARCH_DATABASE_EXCLUDE_MATCH_SCOPE_BASENAME,
                                                                                  FSEARCH_DATABASE_EXCLUDE_TARGET_BOTH);
+        fsearch_database_exclude_manager_add(excludes, exclude);
+    }
+    for (char **p = exclude_paths; p && *p; p++) {
+        g_autofree char *path = absolute_path(*p);
+        g_autoptr(FsearchDatabaseExclude) exclude = fsearch_database_exclude_new(path,
+                                                                                 TRUE,
+                                                                                 FSEARCH_DATABASE_EXCLUDE_TYPE_FIXED,
+                                                                                 FSEARCH_DATABASE_EXCLUDE_MATCH_SCOPE_FULL_PATH,
+                                                                                 FSEARCH_DATABASE_EXCLUDE_TARGET_FOLDERS);
         fsearch_database_exclude_manager_add(excludes, exclude);
     }
 

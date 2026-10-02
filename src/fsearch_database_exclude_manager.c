@@ -76,6 +76,21 @@ fsearch_database_exclude_manager_new_with_defaults() {
                                                  FSEARCH_DATABASE_EXCLUDE_TYPE_FIXED,
                                                  FSEARCH_DATABASE_EXCLUDE_MATCH_SCOPE_FULL_PATH,
                                                  FSEARCH_DATABASE_EXCLUDE_TARGET_FOLDERS));
+#ifdef __APPLE__
+    // macOS exposes the whole root filesystem a second time below these paths (/.nofollow and
+    // /.resolve are path-resolution namespaces, /System/Volumes holds the data volume whose
+    // contents are already reachable through firmlinks such as /Users and /Applications, plus
+    // internal system volumes). Indexing / would otherwise store most entries twice.
+    const char *darwin_excludes[] = {"/.nofollow", "/.resolve", "/System/Volumes", "/dev"};
+    for (size_t i = 0; i < G_N_ELEMENTS(darwin_excludes); i++) {
+        g_ptr_array_add(self->excludes,
+                        fsearch_database_exclude_new(darwin_excludes[i],
+                                                     TRUE,
+                                                     FSEARCH_DATABASE_EXCLUDE_TYPE_FIXED,
+                                                     FSEARCH_DATABASE_EXCLUDE_MATCH_SCOPE_FULL_PATH,
+                                                     FSEARCH_DATABASE_EXCLUDE_TARGET_FOLDERS));
+    }
+#endif
 
     return self;
 }
