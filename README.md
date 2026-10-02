@@ -53,8 +53,13 @@ app uses. Queries use FSearch's [search syntax](https://github.com/cboxdoerfer/f
 ### Indexing a whole Mac
 
 ```sh
-fsearch-cli index --db ~/fs.db --include / --include /Volumes/SSD1 --one-file-system
+fsearch-cli index --db ~/fs.db --include / --include /Volumes/SSD1 --one-file-system --dev-excludes
 ```
+
+`--dev-excludes` drops common development artifact folders (VCS metadata like `.git`, dependency trees like
+`node_modules` and `Pods`, virtualenvs, build output like `target`/`dist`, and tool caches). Measured on the same Mac:
+the index drops from 18.0M to 8.3M files, the database from 984 MB to 482 MB, and scan-time RAM from 4.3 GB to
+2.2 GB.
 
 `--one-file-system` keeps a scan of `/` from crossing into other mounted volumes, so every volume you list with
 `--include` is covered exactly once. On top of that, the scan deduplicates directories by (device, inode): APFS
