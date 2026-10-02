@@ -57,8 +57,11 @@ fsearch-cli index --db ~/fs.db --include / --include /Volumes/SSD1 --one-file-sy
 ```
 
 `--one-file-system` keeps a scan of `/` from crossing into other mounted volumes, so every volume you list with
-`--include` is covered exactly once. macOS exposes the root filesystem a second time under `/.nofollow`, `/.resolve`
-and `/System/Volumes`; those (and `/dev`) are excluded by default, so no folder ends up indexed twice. Measured on an
+`--include` is covered exactly once. On top of that, the scan deduplicates directories by (device, inode): APFS
+firmlinks (`/Users` and `/System/Volumes/Data/Users` are the same directory), bind mounts and repeated mount points
+are indexed once, under the path the scan reaches first. macOS also exposes the root filesystem a second time under
+`/.nofollow`, `/.resolve` and `/System/Volumes`; those (and `/dev`) are excluded by default so the canonical path wins
+— pass `--no-default-excludes` to see even them. Measured on an
 Apple Silicon Mac with ~18M files / ~2.6M folders (system volume plus an external SSD): ~7 minutes, a ~1 GB database,
 ~4 GB of RAM while scanning, and after a restart of `watch` around 5 seconds until searches are served again. Search
 takes a few hundred milliseconds over 20M entries.
