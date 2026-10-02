@@ -377,6 +377,7 @@ cmd_index(int argc, char **argv) {
     gboolean exclude_hidden = FALSE;
     gboolean one_file_system = FALSE;
     gboolean no_default_excludes = FALSE;
+    gboolean dev_excludes = FALSE;
     gint64 rescan_after = 0;
 
     GOptionEntry entries[] = {
@@ -387,6 +388,7 @@ cmd_index(int argc, char **argv) {
         {"exclude-hidden", 0, 0, G_OPTION_ARG_NONE, &exclude_hidden, "Skip hidden files and folders", NULL},
         {"one-file-system", 0, 0, G_OPTION_ARG_NONE, &one_file_system, "Don't cross filesystem boundaries", NULL},
         {"no-default-excludes", 0, 0, G_OPTION_ARG_NONE, &no_default_excludes, "Don't exclude /dev and the magic namespaces", NULL},
+        {"dev-excludes", 0, 0, G_OPTION_ARG_NONE, &dev_excludes, "Also exclude common dev artifacts (node_modules, .git, .venv, ...)", NULL},
         {"no-monitor", 0, 0, G_OPTION_ARG_NONE, &no_monitor, "Don't mark folders for live monitoring", NULL},
         {"rescan-after", 0, 0, G_OPTION_ARG_INT64, &rescan_after, "Periodic rescan interval in seconds (0 = off)", "SECONDS"},
         {NULL},
@@ -436,6 +438,28 @@ cmd_index(int argc, char **argv) {
                                                                                  FSEARCH_DATABASE_EXCLUDE_MATCH_SCOPE_FULL_PATH,
                                                                                  FSEARCH_DATABASE_EXCLUDE_TARGET_FOLDERS);
         fsearch_database_exclude_manager_add(excludes, exclude);
+    }
+
+    // Directories that are generated, machine-specific and rarely useful to search by name:
+    // VCS metadata, dependency trees, virtualenvs, build output, package-manager caches.
+    static const char *dev_exclude_names[] = {
+        ".git",      ".svn",         ".hg",       ".tox",        ".mypy_cache", ".pytest_cache", ".ruff_cache",
+        "__pycache__", "node_modules", ".venv",    "venv",        "env",         ".env",
+        ".yarn",     ".pnpm-store",  ".npm",      "Pods",        "Carthage",    "DerivedData",
+        ".build",    ".swiftpm",     "target",    "dist",        "build",       "out",
+        ".next",     ".nuxt",        ".svelte-kit", ".turbo",    ".parcel-cache", ".rollup.cache",
+        ".gradle",   ".idea",        ".vscode",   ".DS_Store",
+    };
+    if (dev_excludes) {
+        for (size_t i = 0; i < G_N_ELEMENTS(dev_exclude_names); i++) {
+            g_autoptr(FsearchDatabaseExclude) exclude =
+                fsearch_database_exclude_new(dev_exclude_names[i],
+                                             TRUE,
+                                             FSEARCH_DATABASE_EXCLUDE_TYPE_FIXED,
+                                             FSEARCH_DATABASE_EXCLUDE_MATCH_SCOPE_BASENAME,
+                                             FSEARCH_DATABASE_EXCLUDE_TARGET_FOLDERS);
+            fsearch_database_exclude_manager_add(excludes, exclude);
+        }
     }
 
     FsearchDatabase *db = fsearch_database_new(g_file_new_for_path(db_path), includes, excludes);
