@@ -120,11 +120,72 @@ test_database_exclude_matching() {
     g_assert_false(fsearch_database_exclude_manager_excludes(exclude_manager, "/home/user/file.txt", "file.txt", FALSE));
 }
 
+static void
+test_database_exclude_large_fixed_set() {
+    g_autoptr(FsearchDatabaseExcludeManager) exclude_manager = fsearch_database_exclude_manager_new();
+    const guint count = 20000;
+    g_autoptr(GTimer) timer = g_timer_new();
+    for (guint i = 0; i < count; ++i) {
+        g_autofree char *path = g_strdup_printf("/Users/dev/work/project-%u/node_modules", i);
+        g_autoptr(FsearchDatabaseExclude) exclude =
+            fsearch_database_exclude_new(path,
+                                         TRUE,
+                                         FSEARCH_DATABASE_EXCLUDE_TYPE_FIXED,
+                                         FSEARCH_DATABASE_EXCLUDE_MATCH_SCOPE_FULL_PATH,
+                                         FSEARCH_DATABASE_EXCLUDE_TARGET_BOTH);
+        fsearch_database_exclude_manager_add(exclude_manager, exclude);
+    }
+    // Adding 20,000 fixed full-path excludes must stay O(N), not O(N^2).
+    g_assert_cmpfloat(g_timer_elapsed(timer, NULL), <, 2.0);
+
+    // Duplicate add must be deduplicated cleanly.
+    g_autoptr(FsearchDatabaseExclude) dup =
+        fsearch_database_exclude_new("/Users/dev/work/project-0/node_modules",
+                                     TRUE,
+                                     FSEARCH_DATABASE_EXCLUDE_TYPE_FIXED,
+                                     FSEARCH_DATABASE_EXCLUDE_MATCH_SCOPE_FULL_PATH,
+                                     FSEARCH_DATABASE_EXCLUDE_TARGET_BOTH);
+    fsearch_database_exclude_manager_add(exclude_manager, dup);
+    g_autoptr(GPtrArray) list = fsearch_database_exclude_manager_get_excludes(exclude_manager);
+    g_assert_cmpuint(list->len, ==, count);
+
+    // Lookup must be fast and accurate for first, middle, last, and non-matching paths.
+    g_timer_start(timer);
+    for (guint i = 0; i < count; ++i) {
+        g_autofree char *miss = g_strdup_printf("/Users/dev/work/project-%u/src", i);
+        g_assert_false(fsearch_database_exclude_manager_excludes(exclude_manager, miss, "src", TRUE));
+    }
+    g_assert_cmpfloat(g_timer_elapsed(timer, NULL), <, 2.0);
+    g_assert_true(fsearch_database_exclude_manager_excludes(exclude_manager,
+                                                            "/Users/dev/work/project-19999/node_modules",
+                                                            "node_modules",
+                                                            TRUE));
+
+    // Copy must preserve indexed matching, and remove must stop matching.
+    g_autoptr(FsearchDatabaseExcludeManager) copy = fsearch_database_exclude_manager_copy(exclude_manager);
+    g_assert_true(fsearch_database_exclude_manager_excludes(copy,
+                                                            "/Users/dev/work/project-19999/node_modules",
+                                                            "node_modules",
+                                                            TRUE));
+    g_autoptr(FsearchDatabaseExclude) to_remove =
+        fsearch_database_exclude_new("/Users/dev/work/project-19999/node_modules",
+                                     TRUE,
+                                     FSEARCH_DATABASE_EXCLUDE_TYPE_FIXED,
+                                     FSEARCH_DATABASE_EXCLUDE_MATCH_SCOPE_FULL_PATH,
+                                     FSEARCH_DATABASE_EXCLUDE_TARGET_BOTH);
+    fsearch_database_exclude_manager_remove(exclude_manager, to_remove);
+    g_assert_false(fsearch_database_exclude_manager_excludes(exclude_manager,
+                                                             "/Users/dev/work/project-19999/node_modules",
+                                                             "node_modules",
+                                                             TRUE));
+}
+
 int
 main(int argc, char *argv[]) {
     g_test_init(&argc, &argv, NULL);
     g_test_add_func("/FSearch/database/exclude", test_database_exclude);
     g_test_add_func("/FSearch/database/exclude_manager", test_database_exclude_manager);
     g_test_add_func("/FSearch/database/exclude_matching", test_database_exclude_matching);
+    g_test_add_func("/FSearch/database/exclude_large_fixed_set", test_database_exclude_large_fixed_set);
     return g_test_run();
 }

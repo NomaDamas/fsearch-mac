@@ -106,3 +106,15 @@ test('test_time_utils',
        'G_TEST_BUILDDIR=@0@'.format(meson.current_build_dir()),
      ],
 )
+
+test_cli_exclude_from = executable('test_cli_exclude_from',
+                                   'test_cli_exclude_from.c',
+                                   dependencies : libfsearch_core_dep)
+test('test_cli_exclude_from',
+     test_cli_exclude_from,
+     depends : [fsearch_cli],
+     env : [
+       'FSEARCH_CLI_BIN=@0@'.format(fsearch_cli.full_path()),
+     ],
+     timeout : 60,
+)
