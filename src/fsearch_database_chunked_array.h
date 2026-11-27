@@ -27,6 +27,11 @@ fsearch_database_chunked_array_new(DynamicArray *array,
                                    GDestroyNotify entry_free_func);
 
 FsearchDatabaseChunkedArray *
+fsearch_database_chunked_array_new_from_arrays(DynamicArray *arrays,
+                                               FsearchDatabaseSortOrderChain chain,
+                                               FsearchDatabaseEntryType entry_type);
+
+FsearchDatabaseChunkedArray *
 fsearch_database_chunked_array_ref(FsearchDatabaseChunkedArray *self);
 
 void
@@ -51,6 +56,12 @@ DynamicArray *
 fsearch_database_chunked_array_steal_descendants(FsearchDatabaseChunkedArray *self,
                                                  FsearchDatabaseEntry *folder,
                                                  int32_t num_known_descendants);
+
+// Like steal_descendants, but leaves the array untouched.
+DynamicArray *
+fsearch_database_chunked_array_get_descendants(FsearchDatabaseChunkedArray *self,
+                                               FsearchDatabaseEntry *folder,
+                                               int32_t num_known_descendants);
 
 uint32_t
 fsearch_database_chunked_array_remove_marked_folders(FsearchDatabaseChunkedArray *self, int32_t num_expected_entries);

@@ -150,7 +150,7 @@ FSearch is a fast file search utility, inspired by Everything Search Engine. It'
 
 ## Requirements
 
-- GTK 3.22
+- GTK 3.24
 - GLib 2.60
 - glibc 2.19 or musl 1.1.15 (other C standard libraries might work too, those are just the ones I verified)
 - PCRE2 (libpcre2) 10.21
@@ -166,7 +166,7 @@ The **Development** packages are primarily intended for testing and adventurous 
 | Distribution                                                                                          | Stable                                                                                                                     | Development                                                                            |
 |-------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
 | Ubuntu                                                                                                | [PPA Stable](https://launchpad.net/~christian-boxdoerfer/+archive/ubuntu/fsearch-stable)                                   | [PPA Daily](https://launchpad.net/~christian-boxdoerfer/+archive/ubuntu/fsearch-daily) |
-| Arch Linux                                                                                            | [AUR](https://aur.archlinux.org/packages/fsearch/)                                                                         | [AUR (git)](https://aur.archlinux.org/packages/fsearch-git/)                           |
+| Arch Linux                                                                                            | [Official Repository](https://archlinux.org/packages/extra/x86_64/fsearch/)                                                                         | [AUR (git)](https://aur.archlinux.org/packages/fsearch-git/)                           |
 | Fedora/RHEL/CentOS                                                                                    | [COPR Stable](https://copr.fedorainfracloud.org/coprs/cboxdoerfer/fsearch/)                                                | [COPR Nightly](https://copr.fedorainfracloud.org/coprs/cboxdoerfer/fsearch_nightly/)   |
 | Debian                                                                                                | [OpenBuildService](https://software.opensuse.org//download.html?project=home%3Acboxdoerfer&package=fsearch#manualDebian)   |                                                                                        |
 | openSUSE                                                                                              | [OpenBuildService](https://software.opensuse.org//download.html?project=home%3Acboxdoerfer&package=fsearch#manualopenSUSE) |                                                                                        |
@@ -201,8 +201,6 @@ And of course: Thank you for taking the time to translate FSearch!
 
 * Sorting lots of results by *Type* can be very slow, since gathering that information is expensive, and the data isn't
   indexed. This also means that when the view is sorted by *Type*, searching will reset the sort order to *Name*.
-* Using the *Move to Trash* option doesn't update the database index, so trashed files/folders show up in the result
-  list as if nothing happened to them.
 
 ## Why yet another search utility?
 

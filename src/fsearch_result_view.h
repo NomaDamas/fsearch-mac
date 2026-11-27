@@ -21,7 +21,7 @@ typedef struct {
 
     guint view_id;
     FsearchDatabaseIndexProperty sort_order;
-    GtkSortType sort_type;
+    FsearchSortDirection sort_direction;
 } FsearchResultView;
 
 FsearchResultView *
@@ -32,6 +32,9 @@ fsearch_result_view_free(FsearchResultView *result_view);
 
 void
 fsearch_result_view_row_cache_reset(FsearchResultView *result_view);
+
+FsearchDatabaseEntryInfo *
+fsearch_result_view_get_entry_info(FsearchResultView *view, uint32_t row);
 
 char *
 fsearch_result_view_query_tooltip(FsearchResultView *view,

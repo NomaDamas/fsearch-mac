@@ -1,14 +1,15 @@
 #pragma once
 
 #include "fsearch_array.h"
+#include "fsearch_database_chunked_array.h"
 #include "fsearch_database_entry.h"
 #include "fsearch_database_index_properties.h"
 #include "fsearch_database_search_info.h"
 #include "fsearch_query.h"
+#include "fsearch_sort_direction.h"
 
 #include <gio/gio.h>
 #include <glib.h>
-#include <gtk/gtkenums.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -16,14 +17,15 @@ G_BEGIN_DECLS
 
 typedef struct FsearchDatabaseSearchView FsearchDatabaseSearchView;
 
+// Takes ownership of file_chunks and folder_chunks
 FsearchDatabaseSearchView *
 fsearch_database_search_view_new(uint32_t id,
                                  FsearchQuery *query,
-                                 DynamicArray *files,
-                                 DynamicArray *folders,
+                                 FsearchDatabaseChunkedArray *file_chunks,
+                                 FsearchDatabaseChunkedArray *folder_chunks,
                                  GHashTable *old_selection,
                                  FsearchDatabaseSortOrderChain chain,
-                                 GtkSortType sort_type,
+                                 FsearchSortDirection sort_direction,
                                  bool is_complete);
 
 void
@@ -48,7 +50,7 @@ fsearch_database_search_view_sort(FsearchDatabaseSearchView *view,
                                   DynamicArray *files_fast_sorted,
                                   DynamicArray *folders_fast_sorted,
                                   FsearchDatabaseIndexProperty sort_order,
-                                  GtkSortType sort_type,
+                                  FsearchSortDirection sort_direction,
                                   GCancellable *cancellable);
 
 // Selection handling
