@@ -34,6 +34,7 @@
 #include "fsearch_sort_direction.h"
 
 #include <config.h>
+#include <errno.h>
 #include <gio/gio.h>
 #include <gio/gunixsocketaddress.h>
 #include <glib-unix.h>
@@ -368,12 +369,51 @@ open_database(const char *db_path, bool read_only, const bool *monitor) {
 
 // region index
 
+static void
+add_exclude_paths_from_file(FsearchDatabaseExcludeManager *excludes, const char *list_path) {
+    FILE *fp = g_strcmp0(list_path, "-") == 0 ? stdin : fopen(list_path, "r");
+    if (!fp) {
+        die("index: cannot open --exclude-from %s: %s", list_path, g_strerror(errno));
+    }
+    char *line = NULL;
+    size_t cap = 0;
+    ssize_t nread = 0;
+    while ((nread = getline(&line, &cap, fp)) != -1) {
+        while (nread > 0 && (line[nread - 1] == '\n' || line[nread - 1] == '\r')) {
+            line[--nread] = '\0';
+        }
+        if (nread == 0) {
+            continue;
+        }
+        g_autofree char *path = absolute_path(line);
+        g_autoptr(FsearchDatabaseExclude) exclude =
+            fsearch_database_exclude_new(path,
+                                         TRUE,
+                                         FSEARCH_DATABASE_EXCLUDE_TYPE_FIXED,
+                                         FSEARCH_DATABASE_EXCLUDE_MATCH_SCOPE_FULL_PATH,
+                                         FSEARCH_DATABASE_EXCLUDE_TARGET_BOTH);
+        fsearch_database_exclude_manager_add(excludes, exclude);
+    }
+    free(line);
+    if (ferror(fp)) {
+        const int saved = errno;
+        if (fp != stdin) {
+            fclose(fp);
+        }
+        die("index: error reading --exclude-from %s: %s", list_path, g_strerror(saved));
+    }
+    if (fp != stdin) {
+        fclose(fp);
+    }
+}
+
 static int
 cmd_index(int argc, char **argv) {
     g_autofree char *db_path = NULL;
     g_auto(GStrv) include_paths = NULL;
     g_auto(GStrv) exclude_patterns = NULL;
     g_auto(GStrv) exclude_paths = NULL;
+    g_auto(GStrv) exclude_from_files = NULL;
     gboolean no_monitor = FALSE;
     gboolean exclude_hidden = FALSE;
     gboolean one_file_system = FALSE;
@@ -386,6 +426,7 @@ cmd_index(int argc, char **argv) {
         {"include", 'i', 0, G_OPTION_ARG_FILENAME_ARRAY, &include_paths, "Folder to index (repeatable)", "DIR"},
         {"exclude", 'e', 0, G_OPTION_ARG_STRING_ARRAY, &exclude_patterns, "Wildcard to exclude by name (repeatable)", "GLOB"},
         {"exclude-path", 'x', 0, G_OPTION_ARG_FILENAME_ARRAY, &exclude_paths, "Folder to exclude by full path (repeatable)", "DIR"},
+        {"exclude-from", 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &exclude_from_files, "File of full paths to exclude, one per line ('-' for stdin, repeatable)", "FILE"},
         {"exclude-hidden", 0, 0, G_OPTION_ARG_NONE, &exclude_hidden, "Skip hidden files and folders", NULL},
         {"one-file-system", 0, 0, G_OPTION_ARG_NONE, &one_file_system, "Don't cross filesystem boundaries", NULL},
         {"no-default-excludes", 0, 0, G_OPTION_ARG_NONE, &no_default_excludes, "Don't exclude /dev and the magic namespaces", NULL},
@@ -439,6 +480,9 @@ cmd_index(int argc, char **argv) {
                                                                                  FSEARCH_DATABASE_EXCLUDE_MATCH_SCOPE_FULL_PATH,
                                                                                  FSEARCH_DATABASE_EXCLUDE_TARGET_FOLDERS);
         fsearch_database_exclude_manager_add(excludes, exclude);
+    }
+    for (char **p = exclude_from_files; p && *p; p++) {
+        add_exclude_paths_from_file(excludes, *p);
     }
 
     // Directories that are generated, machine-specific and rarely useful to search by name:

@@ -43,6 +43,9 @@ them) *Full Disk Access* in System Settings to index protected folders.
 # Build a database; folders are marked for live monitoring unless --no-monitor is given
 fsearch-cli index --db ~/fs.db --include ~/Documents --include ~/Projects --exclude node_modules --exclude .git
 
+# Pass large exact-path exclusion lists (files or folders, one per line; '-' for stdin) without hitting OS ARG_MAX
+fsearch-cli index --db ~/fs.db --include ~/Projects --exclude-from ~/excludes.txt
+
 # Search it (loads the database file)
 fsearch-cli search --db ~/fs.db 'report ext:pdf'
 fsearch-cli search --db ~/fs.db --json --limit 20 --sort mtime --desc '*.md'
