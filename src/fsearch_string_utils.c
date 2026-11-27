@@ -87,8 +87,38 @@ fsearch_string_has_upper(const char *str) {
     return false;
 }
 
+static const char *
+find_last_char_len(const char *str, int c, size_t len) {
+#if defined(__linux__) && defined(_GNU_SOURCE)
+    return memrchr(str, c, len);
+#else
+    for (size_t i = len; i > 0; i--) {
+        if ((unsigned char)str[i - 1] == (unsigned char)c) {
+            return str + i - 1;
+        }
+    }
+    return NULL;
+#endif
+}
+
+const char *
+fsearch_string_get_extension_len(const char *str, size_t len) {
+    g_return_val_if_fail(str, NULL);
+
+    const char *ext = len > 0 ? find_last_char_len(str, '.', len) : NULL;
+    if (!ext || ext == str || ext == str + len - 1) {
+        // filename has no dot
+        // OR filename starts with dot (i.e. hidden file)
+        // OR filename ends with dot
+        return "";
+    }
+    return ext + 1;
+}
+
 const char *
 fsearch_string_get_extension(const char *str) {
+    g_return_val_if_fail(str, NULL);
+
     const char *ext = strrchr(str, '.');
     if (!ext || ext == str || ext[1] == '\0') {
         // filename has no dot

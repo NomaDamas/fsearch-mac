@@ -31,6 +31,7 @@
 #include "fsearch_database_work.h"
 #include "fsearch_filter_manager.h"
 #include "fsearch_query.h"
+#include "fsearch_sort_direction.h"
 
 #include <config.h>
 #include <gio/gio.h>
@@ -133,7 +134,7 @@ typedef struct {
     uint32_t limit;
     FsearchQueryFlags flags;
     FsearchDatabaseIndexProperty sort_order;
-    GtkSortType sort_type;
+    FsearchSortDirection sort_type;
 } SearchRequest;
 
 static void
@@ -584,7 +585,7 @@ cmd_search(int argc, char **argv) {
         .query = argc > 1 ? g_strjoinv(" ", argv + 1) : g_strdup(""),
         .limit = count ? 0 : (uint32_t)limit,
         .sort_order = parse_sort_order(sort),
-        .sort_type = descending ? GTK_SORT_DESCENDING : GTK_SORT_ASCENDING,
+        .sort_type = descending ? FSEARCH_SORT_DIRECTION_DESCENDING : FSEARCH_SORT_DIRECTION_ASCENDING,
     };
     if (request.sort_order == DATABASE_INDEX_PROPERTY_NONE) {
         die("search: unknown sort key: %s", sort);
@@ -795,7 +796,7 @@ daemon_run_next_search(Daemon *daemon) {
             .limit = (uint32_t)g_ascii_strtoull(fields[1], NULL, 10),
             .flags = (FsearchQueryFlags)g_ascii_strtoull(fields[2], NULL, 10),
             .sort_order = parse_sort_order(fields[3]),
-            .sort_type = g_strcmp0(fields[4], "desc") == 0 ? GTK_SORT_DESCENDING : GTK_SORT_ASCENDING,
+            .sort_type = g_strcmp0(fields[4], "desc") == 0 ? FSEARCH_SORT_DIRECTION_DESCENDING : FSEARCH_SORT_DIRECTION_ASCENDING,
             .query = g_strdup(fields[6]),
         };
         if (request.sort_order == DATABASE_INDEX_PROPERTY_NONE) {
